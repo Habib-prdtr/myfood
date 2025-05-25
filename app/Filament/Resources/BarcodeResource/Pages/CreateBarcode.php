@@ -8,5 +8,7 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateBarcode extends CreateRecord
 {
+    protected static ?string $title = 'Create Qr Code';
+
     protected static string $resource = BarcodeResource::class;
 }
