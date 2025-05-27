@@ -18,21 +18,30 @@ use Xendit\Invoice\InvoiceApi;
 
 class TransactionController extends Controller
 {
-    var $apiInstance = null;
+    protected $apiInstance;
 
     public function __construct()
     {
-        $xenditKey = config('xendit.secret_key');
-        Configuration::setXenditKey($xenditKey);
-        $this->apiInstance = new InvoiceApi();
+        $apiKey = config('xendit.secret_key');
+
+        $client = new \GuzzleHttp\Client([
+            'auth' => [$apiKey, ''],
+        ]);
+
+        $this->apiInstance = new InvoiceApi($client);
     }
 
-    public function handlePayment(Request $request)
+    public function handlePayment(Request $request, $token)
     {
+        Log::info('MASUK KE handlePayment', [
+            'token' => $token,
+            'action' => $request->input('action'),
+        ]);
+
         $action = $request->input('action');
 
         if ($action === 'pay') {
-            return $this->processPayment($request);
+            return $this->processPayment($request, $token);
         }
 
         if ($action === 'continue') {
@@ -42,20 +51,23 @@ class TransactionController extends Controller
                 return view('payment.failure');
             }
 
-
             $transaction = Transaction::where('external_id', $externalId)->first();
+            if (!$transaction) {
+                return view('payment.failure');
+            }
+
             return redirect($transaction->checkout_link);
         }
 
         abort(400, 'Invalid action.');
     }
 
-    public function processPayment(Request $request)
+    public function processPayment(Request $request, $token)
     {
         $uuid = (string) Str::uuid();
 
         $sessionToken = session('payment_token');
-        $requestToken = $request->input('token');
+        $requestToken = $token;
 
         if ($sessionToken !== $requestToken) {
             return redirect()->route('payment.failure');
@@ -73,50 +85,52 @@ class TransactionController extends Controller
             ], 400);
         }
 
-        $tableNumberId = Barcode::where('table_number', $tableNumber)->first();
+        $tableNumberRecord = Barcode::where('table_number', $tableNumber)->first();
+        if (!$tableNumberRecord) {
+            // Nomor meja tidak ditemukan
+            Log::warning("Nomor meja tidak ditemukan: {$tableNumber}");
+            return redirect()->route('payment.failure')->with('error', 'Nomor meja tidak ditemukan.');
+        }
 
         $transactionCode = 'TRX_' . mt_rand(100000, 999999);
 
         try {
             $subTotal = 0;
             $items = collect($cartItems)
-            ->map(function ($item) use (&$subTotal) {
-                $price = isset($item['price_afterdiscount']) ? $item['price_afterdiscount'] : $item['price'];
+                ->map(function ($item) use (&$subTotal) {
+                    $price = isset($item['price_afterdiscount']) ? $item['price_afterdiscount'] : $item['price'];
+                    $category = Category::find($item['categories_id'])->name ?? 'Lainnya';
+                    $foodSubtotal = $price * $item['quantity'];
+                    $subTotal += $foodSubtotal;
 
-                $category = Category::find($item['categories_id'])->name;
+                    $url = route('product.detail', ['id' => $item['id']]);
 
-                $foodSubtotal = $price * $item['quantity'];
-                $subTotal += $foodSubtotal;
+                    return [
+                        'name' => $item['name'],
+                        'quantity' => $item['quantity'],
+                        'price' => (int) $price,
+                        'category' => $category,
+                        'url' => $url,
+                    ];
+                })
+                ->values()
+                ->toArray();
 
-                $url = route('product.detail', ['id' => $item['id']]);
-
-                return [
-                    'name' => $item['name'],
-                    'quantity' => $item['quantity'],
-                    'price' => (int) $price,
-                    'category' => $category,
-                    'url' => $url,
-                ];
-            })
-            ->values()
-            ->toArray();
-
-
-            $ppn = 0.11 * $subTotal;
+            $ppn = round(0.11 * $subTotal);
 
             $description = <<<END
-                Pembayaran makanan<br>
-                Nomor Meja: {$tableNumber}<br>
-                Nama: {$name}<br>
-                Nomor Telepon: {$phone}<br>
-                Kode Transaksi: {$transactionCode}<br>
-                END;
+Pembayaran makanan<br>
+Nomor Meja: {$tableNumber}<br>
+Nama: {$name}<br>
+Nomor Telepon: {$phone}<br>
+Kode Transaksi: {$transactionCode}<br>
+END;
 
             $createInvoiceRequest = new CreateInvoiceRequest([
                 'external_id' => $uuid,
                 'amount' => $subTotal + $ppn,
                 'description' => $description,
-                'invoice_duration' => 3600,
+                'invoice_duration' => 3600, // 1 jam
                 'currency' => 'IDR',
                 'customer' => [
                     'given_names' => $name,
@@ -132,27 +146,27 @@ class TransactionController extends Controller
                         'value' => $ppn,
                     ],
                 ],
-                "customer_notification_preference" => [
-                    "invoice_paid" => [
-                      "whatsapp",
-                    ]
+                'customer_notification_preference' => [
+                    'invoice_paid' => [
+                        'whatsapp',
+                    ],
                 ],
             ]);
 
             $invoice = $this->apiInstance->createInvoice($createInvoiceRequest);
 
             $transaction = new Transaction();
-            $transaction->checkout_link = $invoice['invoice_url'];
+            $transaction->checkout_link = $invoice['invoice_url'] ?? '';
             $transaction->payment_method = "PENDING";
             $transaction->phone = $phone;
             $transaction->name = $name;
             $transaction->subtotal = $subTotal;
             $transaction->ppn = $ppn;
-            $transaction->barcodes_id = $tableNumberId->id;
+            $transaction->barcodes_id = $tableNumberRecord->id;
             $transaction->total = $subTotal + $ppn;
             $transaction->external_id = $uuid;
             $transaction->code = $transactionCode;
-            $transaction->payment_status = $invoice->getStatus();
+            $transaction->payment_status = $invoice['status'] ?? 'PENDING';
             $transaction->save();
 
             foreach ($cartItems as $cartItem) {
@@ -170,7 +184,7 @@ class TransactionController extends Controller
             session(['external_id' => $uuid]);
             session(['has_unpaid_transaction' => true]);
 
-            return redirect($invoice['invoice_url']);
+            return redirect($invoice['invoice_url'] ?? route('payment.failure'));
 
         } catch (\Exception $e) {
             Log::error('Failed to create invoice', [
@@ -182,94 +196,55 @@ class TransactionController extends Controller
         }
     }
 
-    public function paymentStatus($id)
-    {
-        try {
-            $result = $this->apiInstance->getInvoices(null, $id);
-
-            $transaction = Transaction::where('external_id', $id)->firstOrFail();
-
-            if ($transaction->payment_status === 'SETTLED') {
-                $this->clearSession();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Pembayaran anda telah berhasil diproses',
-                ]);
-            }
-
-            $transaction->payment_status = $result[0]['status'];
-            $transaction->payment_method = $result[0]['payment_method'];
-
-            $transaction->save();
-
-            $this->clearSession();
-
-            return response()->json([
-                'success' => true
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to get invoice', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return view('payment.failure');
-        }
-    }
-
-    public function handleWebhook(Request $request)
-    {
-        $webhookToken = $request->header('x-callback-token');
-
-        $expectedToken = config('xendit.webhook_token');
-
-        if ($webhookToken !== $expectedToken) {
-            return response()->json([
-                'message' => 'Unauthorized webhook request.',
-            ], 401);
-        }
-
-        try {
-            $data = $request->all();
-            $external_id = $data['external_id'];
-            $status = $data['status'];
-            $payment_method = $data['payment_method'];
-
-
-            $transaction = Transaction::where('external_id', $external_id)->first();
-            $transaction->payment_status = $status;
-            $transaction->payment_method = $payment_method;
-            $transaction->updated_at = $data['updated'];
-            $transaction->save();
-
-            $this->clearSession();
-
-
-            return response()->json([
-                'code' => 200,
-                'message' => 'Webhook received',
-                'status' => $status,
-                'payment_method' => $payment_method,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to handle webhook', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'message' => 'Failed to handle webhook.',
-            ], 500);
-        }
-
-    }
-
     public function clearSession()
     {
         Session::forget(['name', 'external_id', 'has_unpaid_transaction', 'cart_items', 'payment_token']);
         Session::save();
     }
+
+    public function paymentStatus($id)
+    {
+        // Contoh implementasi cek status pembayaran
+        $transaction = Transaction::where('external_id', $id)->first();
+
+        if (!$transaction) {
+            return response()->json(['message' => 'Transaction not found'], 404);
+        }
+
+        return response()->json([
+            'status' => $transaction->payment_status,
+            'external_id' => $transaction->external_id,
+            'total' => $transaction->total,
+        ]);
+    }
+
+    public function handleWebhook(Request $request)
+{
+    
+    Log::info('Webhook diterima', ['payload' => $request->all()]);
+
+    $externalId = $request->input('external_id');
+    $status = $request->input('status');
+    $paymentMethod = $request->input('payment_method');
+
+    $transaction = Transaction::where('external_id', $externalId)->first();
+
+    if (! $transaction) {
+        Log::warning("Transaksi tidak ditemukan untuk external_id: $externalId");
+        return response()->json(['message' => 'Transaction not found'], 404);
+    }
+
+    $transaction->payment_status = $status;
+    $transaction->payment_method = $paymentMethod;
+    $transaction->save();
+
+    Log::info('Transaksi diperbarui dari webhook', [
+        'external_id' => $externalId,
+        'status' => $status,
+        'payment_method' => $paymentMethod,
+    ]);
+
+    return response()->json(['message' => 'Webhook processed'], 200);
+}
+
 }

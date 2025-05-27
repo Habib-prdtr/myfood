@@ -34,10 +34,11 @@ Route::middleware(CheckTableNumber::class)->controller(TransactionController::cl
     Route::get('/checkout', CheckoutPage::class)->name('payment.checkout');
 
     // Proses pembayaran
-    Route::middleware('throttle:10,1')->post('/payment', 'handlePayment')->name('payment');
+    Route::middleware('throttle:10,1')->post('/payment/{token}', 'handlePayment')->name('payment');
     Route::get('/payment', function () {
-        abort(404);
-    });
+    abort(404);
+})->name('payment.dummy'); // Atau tanpa name sama sekali
+
 
     // Status pembayaran
     Route::get('/payment/status/{id}', 'paymentStatus')->name('payment.status');
@@ -47,7 +48,8 @@ Route::middleware(CheckTableNumber::class)->controller(TransactionController::cl
 });
 
 // Webhook update pembayaran
-Route::post('/payment/webhook', [TransactionController::class, 'handleWebhook'])->name('payment.webhook');
+Route::post('/payment/webhook', [TransactionController::class, 'handleWebhook'])->name('payment.webhook')->withoutMiddleware(['auth']);
+
 
 Route::controller(QRController::class)->group(function (){
     Route::post('/store-qr-result', 'storeResult')->name('product.scan.store');

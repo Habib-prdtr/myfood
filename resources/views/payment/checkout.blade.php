@@ -1,4 +1,5 @@
 <div
+
     x-data="{ open: {{ empty($name) ? "true" : "false" }} }"
     class="flex min-h-screen flex-col bg-white font-poppins"
 >
@@ -10,6 +11,7 @@
     ></livewire:components.page-title-nav>
 
     <div class="container mb-8 space-y-10">
+        
         <div class="space-y-2 text-black-100">
             <div
                 class="flex items-center justify-between rounded-full border border-black-30 px-5 py-3"
@@ -72,48 +74,50 @@
 
         @if (! $hasUnpaidTransaction)
             <form
-                action="{{ route("payment", ["token" => $paymentToken]) }}"
-                method="POST"
-                class="space-y-3"
-            >
-                @csrf
-                <button
-                    @if (empty($name) || empty($phone)) disabled @endif
-                    type="submit"
-                    name="action"
-                    value="pay"
-                    class="flex w-full items-center justify-center gap-2 rounded-full bg-primary-50 px-6 py-3 font-semibold text-black-10 disabled:cursor-not-allowed disabled:bg-primary-30"
-                >
-                    <span>Bayar Sekarang</span>
-                    <img
-                        src="{{ asset("assets/icons/arrow-right-white-icon.svg") }}"
-                        alt="Cart"
-                    />
-                </button>
-            </form>
+    form action="{{ route('payment', ['token' => $paymentToken]) }}" method="POST"
+    class="space-y-3"
+>
+    @csrf
+
+    <button
+        @if (empty($name) || empty($phone)) disabled @endif
+        type="submit"
+        name="action"
+        value="pay"
+        class="flex w-full items-center justify-center gap-2 rounded-full bg-primary-50 px-6 py-3 font-semibold text-black-10 disabled:cursor-not-allowed disabled:bg-primary-30"
+    >
+        <span>Bayar Sekarang</span>
+        <img
+            src="{{ asset("assets/icons/arrow-right-white-icon.svg") }}"
+            alt="Cart"
+        />
+    </button>
+</form>
         @else
             <form
-                action="{{ route("payment", ["token" => $paymentToken]) }}"
-                method="POST"
-                class="flex gap-4 space-y-3"
-            >
-                @csrf
-                <button
-                    type="submit"
-                    @if (empty($name) || empty($phone)) disabled @endif
-                    name="action"
-                    value="continue"
-                    class="flex w-full items-center justify-center gap-2 rounded-full bg-primary-50 px-6 py-3 font-semibold text-black-10 disabled:cursor-not-allowed disabled:bg-primary-30"
-                >
-                    <span>Lanjut Bayar</span>
-                    <img
-                        src="{{ asset("assets/icons/arrow-right-white-icon.svg") }}"
-                        alt="Cart"
-                    />
-                </button>
-            </form>
+    action="{{ route("payment", ["token" => $paymentToken]) }}"
+    method="POST"
+    class="space-y-3"
+>
+    @csrf
+    <button
+        type="submit"
+        name="action"
+        value="continue"
+        @if (empty($name) || empty($phone)) disabled @endif
+        class="flex w-full items-center justify-center gap-2 rounded-full bg-primary-50 px-6 py-3 font-semibold text-black-10 disabled:cursor-not-allowed disabled:bg-primary-30"
+    >
+        <span>Lanjut Bayar</span>
+        <img
+            src="{{ asset("assets/icons/arrow-right-white-icon.svg") }}"
+            alt="Cart"
+        />
+    </button>
+</form>
         @endif
     </div>
+
+    
 
     <div x-show="open">
         <livewire:components.customer-modal />
