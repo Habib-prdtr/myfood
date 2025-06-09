@@ -34,6 +34,7 @@ class FoodsResource extends Resource
                     ->columnSpanFull(),
                 Forms\Components\FileUpload::make('image')
                     ->image()
+                    ->disk('public')
                     ->directory('foods')
                     ->required()
                     ->columnSpanFull(),

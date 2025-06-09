@@ -2,22 +2,27 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\TransactionItemsResource\Pages\CreateTransactionItems;
+use Log;
+use Filament\Forms;
+use Filament\Tables;
+
+use Filament\Forms\Form;
+use Filament\Tables\Table;
+use App\Models\Transaction;
+use App\Models\TransactionItems;
+use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
+use Illuminate\Support\Facades\Route;
+use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Forms\Components\FileUpload;
+use Illuminate\Contracts\Support\Htmlable;
+use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionItemsResource\Pages\EditTransactionItems;
 use App\Filament\Resources\TransactionItemsResource\Pages\ListTransactionItems;
-
-use App\Models\TransactionItems;
-use App\Filament\Resources\TransactionResource\Pages;
-use App\Models\Transaction;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Tables\Actions\Action;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Support\Facades\Route;
+use App\Filament\Resources\TransactionItemsResource\Pages\CreateTransactionItems;
 
 
 class TransactionResource extends Resource
@@ -94,8 +99,8 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('phone')
                     ->label('Phone Number')
                     ->searchable(),
-                Tables\Columns\ImageColumn::make('barcodes.image')
-                    ->label('Barcode'),
+                Tables\Columns\TextColumn::make('barcodes.table_number')
+                    ->label('Nomor Meja'),
                 Tables\Columns\TextColumn::make('payment_method')
                     ->label('Payment Method')
                     ->searchable(),
