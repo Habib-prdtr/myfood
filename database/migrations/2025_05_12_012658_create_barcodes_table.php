@@ -9,23 +9,23 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::create('barcodes', function (Blueprint $table) {
-            $table->id();
-            $table->string('table_number');
-            $table->string('image');
-            $table->string('qr_value');
-            $table->foreignId('users_id')->constrained('users')->cascadeOnDelete();
-            $table->timestamps();
-        });
-    }
+    // public function up(): void
+    // {
+    //     Schema::create('barcodes', function (Blueprint $table) {
+    //         $table->id();
+    //         $table->string('table_number');
+    //         $table->string('image');
+    //         $table->string('qr_value');
+    //         $table->foreignId('users_id')->constrained('users')->cascadeOnDelete();
+    //         $table->timestamps();
+    //     });
+    // }
 
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
-        Schema::dropIfExists('barcodes');
-    }
+    // public function down(): void
+    // {
+    //     Schema::dropIfExists('barcodes');
+    // }
 };

@@ -21,4 +21,9 @@ class Transaction extends Model
         return $this->hasMany(TransactionItems::class, 'transaction_id');
     }
 
+    public function tandaiNotifikasiTerkirim()
+    {
+        $this->notifikasi_terkirim = true;
+        $this->save();
+    }
 }

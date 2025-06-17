@@ -46,5 +46,16 @@
                 All Food
             </span>
         </a>
+        <a class="flex flex-col items-center" href="pesanan" wire:navigate>
+            <img
+                src="{{ request()->routeIs("user.pesanan") ? asset("assets/icons/pesanan-active.svg") : asset("assets/icons/pesanan.svg") }}"
+                alt="Pesanan"
+            />
+            <span
+                class="{{ request()->routeIs("user.pesanan") ? "text-primary-50" : "text-black-100" }} mt-1 text-sm"
+            >
+                Pesanan
+            </span>
+        </a>
     </div>
 </nav>

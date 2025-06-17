@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Models\TransactionItems;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Route;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
@@ -82,7 +83,14 @@ class TransactionResource extends Resource
                 Forms\Components\TextInput::make('total')
                     ->required()
                     ->numeric(),
-
+                Forms\Components\Select::make('status_pesanan')
+                    ->options([
+                        'menunggu' => 'Menunggu',
+                        'diproses' => 'Diproses',
+                        'diantar' => 'Sudah Diantar',
+                    ])
+                    ->required()
+                    ->label('Status Pesanan'),
             ]);
     }
 
@@ -124,6 +132,14 @@ class TransactionResource extends Resource
                     ->label('Total')
                     ->numeric()
                     ->money('IDR'),
+                Tables\Columns\TextColumn::make('status_pesanan')
+                    ->label('Status Pesanan')
+                    ->badge()
+                    ->colors([
+                        'gray' => 'menunggu',
+                        'warning' => 'diproses',
+                        'success' => 'diantar',
+                    ]),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created At')
                     ->dateTime()
@@ -137,7 +153,7 @@ class TransactionResource extends Resource
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make(), // ini boleh kamu hapus karena `canEdit` false
                 Action::make('See transaction')
                     ->color('success')
                     ->url(
@@ -145,6 +161,25 @@ class TransactionResource extends Resource
                             'parent' => $record->id,
                         ])
                     ),
+                Action::make('ubahStatus')
+                    ->label('Ubah Status')
+                    ->form([
+                        Select::make('status_pesanan')
+                            ->label('Status Pesanan')
+                            ->options([
+                                'menunggu' => 'Menunggu',
+                                'diproses' => 'Diproses',
+                                'diantar' => 'Sudah Diantar',
+                            ])
+                            ->required(),
+                    ])
+                    ->action(function (array $data, $record): void {
+                        $record->update([
+                            'status_pesanan' => $data['status_pesanan'],
+                        ]);
+                    })
+                    ->icon('heroicon-o-pencil')
+                    ->color('primary'),
             ])
             ->bulkActions([]);
     }

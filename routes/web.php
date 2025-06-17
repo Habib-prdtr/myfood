@@ -1,20 +1,21 @@
 <?php
 
-use App\Http\Controllers\TransactionController;
+use Livewire\Livewire;
+use App\Models\Transaction;
+use App\Livewire\Pages\CartPage;
+use App\Livewire\Pages\HomePage;
+use App\Livewire\Pages\ScanPage;
+use App\Livewire\Pages\PromoPage;
+use App\Livewire\Pages\DetailPage;
+use App\Livewire\Pages\AllFoodPage;
+use App\Livewire\Pages\CheckoutPage;
+use App\Livewire\Pages\FavoritePage;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\QRController;
 use App\Http\Middleware\CheckTableNumber;
-use App\Livewire\Pages\AllFoodPage;
-use App\Livewire\Pages\CartPage;
-use App\Livewire\Pages\CheckoutPage;
-use App\Livewire\Pages\DetailPage;
-use App\Livewire\Pages\FavoritePage;
-use App\Livewire\Pages\PromoPage;
-use App\Livewire\Pages\HomePage;
 use App\Livewire\Pages\PaymentFailurePage;
 use App\Livewire\Pages\PaymentSuccessPage;
-use App\Livewire\Pages\ScanPage;
-use Illuminate\Support\Facades\Route;
-use Livewire\Livewire;
+use App\Http\Controllers\TransactionController;
 
 Route::middleware(CheckTableNumber::class)->group(function(){
     // Beranda | Home
@@ -28,6 +29,8 @@ Route::middleware(CheckTableNumber::class)->group(function(){
      // Detail Makanan | Food Details
      Route::get('/food/{id}', DetailPage::class)->name('product.detail');
 });
+
+
 
 Route::middleware(CheckTableNumber::class)->controller(TransactionController::class)->group(function(){
     Route::get('/cart', CartPage::class)->name('payment.cart');
@@ -44,6 +47,9 @@ Route::middleware(CheckTableNumber::class)->controller(TransactionController::cl
     Route::get('/payment/status/{id}', 'paymentStatus')->name('payment.status');
     Route::get('/payment/success', PaymentSuccessPage::class)->name('payment.success');
     Route::get('/payment/failure', PaymentFailurePage::class)->name('payment.failure');
+
+    Route::get('pesanan', [TransactionController::class, 'pesananSaya'])->name('user.pesanan');
+    Route::get('/cek-status-pesanan', [TransactionController::class, 'cekStatusPesanan']);
 
 });
 

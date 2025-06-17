@@ -64,6 +64,7 @@ class TransactionController extends Controller
 
     public function processPayment(Request $request, $token)
     {
+        
         $uuid = (string) Str::uuid();
 
         $sessionToken = session('payment_token');
@@ -119,12 +120,12 @@ class TransactionController extends Controller
             $ppn = round(0.11 * $subTotal);
 
             $description = <<<END
-Pembayaran makanan<br>
-Nomor Meja: {$tableNumber}<br>
-Nama: {$name}<br>
-Nomor Telepon: {$phone}<br>
-Kode Transaksi: {$transactionCode}<br>
-END;
+            Pembayaran makanan<br>
+            Nomor Meja: {$tableNumber}<br>
+            Nama: {$name}<br>
+            Nomor Telepon: {$phone}<br>
+            Kode Transaksi: {$transactionCode}<br>
+            END;
 
             $createInvoiceRequest = new CreateInvoiceRequest([
                 'external_id' => $uuid,
@@ -181,6 +182,11 @@ END;
                 ]);
             }
 
+            session([
+                'id_transaksi' => $transaction->id,
+                'nama' => $transaction->name,
+            ]);
+
             session(['external_id' => $uuid]);
             session(['has_unpaid_transaction' => true]);
 
@@ -201,6 +207,64 @@ END;
         Session::forget(['name', 'external_id', 'has_unpaid_transaction', 'cart_items', 'payment_token']);
         Session::save();
     }
+
+    public function pesananSaya()
+    {
+        $nama = session('nama');
+
+        $orders = \App\Models\Transaction::with(['Items.food'])
+            ->where('name', $nama)
+            ->latest()
+            ->get();
+
+        return view('pesanan', compact('orders'));
+    }
+
+    public function cekStatusPesanan()
+    {
+        $nama = session('nama');
+        Log::info("Nama dari session:", ['nama' => $nama]);
+
+        // Ambil pesanan terbaru user ini
+        $pesanan = \App\Models\Transaction::where('name', $nama)
+            ->latest()
+            ->first();
+
+        if (!$pesanan) {
+            Log::info('Tidak ada pesanan ditemukan.');
+            return response()->json([]);
+        }
+
+        $statusSekarang = $pesanan->status_pesanan;
+        $statusTerakhir = session('status_terakhir');
+
+        Log::info('Status sekarang:', ['status' => $statusSekarang]);
+        Log::info('Status terakhir di session:', ['status' => $statusTerakhir]);
+
+        // Jika status berubah, reset notifikasi
+        if ($statusSekarang !== $statusTerakhir) {
+            $pesanan->notifikasi_terkirim = false;
+            $pesanan->save();
+            session(['status_terakhir' => $statusSekarang]); // update session
+            Log::info('Status berubah, reset notifikasi dan update status_terakhir.');
+        }
+
+        // Kalau belum kirim notifikasi untuk status ini
+        if (!$pesanan->notifikasi_terkirim && in_array($statusSekarang, ['diproses', 'diantar'])) {
+            $pesanan->notifikasi_terkirim = true;
+            $pesanan->save();
+
+            Log::info('Kirim notifikasi:', ['status' => $statusSekarang]);
+
+            return response()->json([
+                'status' => $statusSekarang,
+                'nama' => $pesanan->name,
+            ]);
+        }
+
+        return response()->json([]);
+    }
+
 
 //     public function paymentStatus($id)
 //     {

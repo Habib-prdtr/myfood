@@ -24,4 +24,13 @@
     <body class="{{ $class ?? "" }} mx-auto max-w-md bg-[#f5f5f9]">
         {{ $slot }}
     </body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (Notification.permission !== 'granted') {
+                Notification.requestPermission().then(function (permission) {
+                    console.log('Notification permission:', permission);
+                });
+            }
+        });
+    </script>
 </html>
