@@ -2,18 +2,19 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\FoodsResource\Pages;
-use App\Filament\Resources\FoodsResource\RelationManagers;
-use App\Models\Foods;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Concerns\Translatable;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use App\Models\Foods;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Resources\Concerns\Translatable;
+use App\Filament\Resources\FoodsResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Resources\FoodsResource\RelationManagers;
 
 
 class FoodsResource extends Resource
@@ -21,6 +22,11 @@ class FoodsResource extends Resource
     protected static ?string $model = Foods::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-list-bullet';
+
+    public static function canViewAny(): bool
+{
+    return Auth::user()?->hasRole('admin');
+}
 
     public static function form(Form $form): Form
     {

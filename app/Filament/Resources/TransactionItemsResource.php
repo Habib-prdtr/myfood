@@ -2,24 +2,30 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Forms;
+use Filament\Tables;
+use Filament\Forms\Form;
+use Filament\Tables\Table;
+use App\Models\TransactionItems;
+use Filament\Resources\Resource;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\TransactionItemsResource\Pages;
 use App\Filament\Resources\TransactionItemsResource\RelationManagers;
-use App\Models\TransactionItems;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Contracts\Support\Htmlable;
 
 class TransactionItemsResource extends Resource
 {
     protected static ?string $model = TransactionItems::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    public static function canViewAny(): bool
+{
+    return Auth::user()?->hasRole('admin') || Auth::user()?->hasRole('koki') || Auth::user()?->hasRole('pramusaji');
+}
 
     public static function shouldRegisterNavigation() : bool
     {

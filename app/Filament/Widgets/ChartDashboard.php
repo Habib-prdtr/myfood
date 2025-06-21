@@ -4,11 +4,17 @@ namespace App\Filament\Widgets;
 
 use App\Models\Transaction;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class ChartDashboard extends ChartWidget
 {
     protected static ?string $heading = 'Pendapatan Per Hari';
     protected static ?int $sort = 2;
+
+    public static function canView(): bool
+{
+    return Auth::user()?->hasRole('admin');
+}
 
     protected function getData(): array
     {

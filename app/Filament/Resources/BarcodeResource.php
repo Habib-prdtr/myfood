@@ -2,14 +2,15 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\BarcodeResource\Pages;
-use App\Models\Barcode;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use App\Models\Barcode;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use App\Filament\Resources\BarcodeResource\Pages;
 
 
 class BarcodeResource extends Resource
@@ -23,6 +24,11 @@ class BarcodeResource extends Resource
     public static function canEdit(Model $record): bool
     {
         return false;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return Auth::user()?->hasRole('admin');
     }
 
     public static function form(Form $form): Form

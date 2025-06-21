@@ -9,8 +9,9 @@ export default {
         "./resources/**/*.js",
         "./resources/**/*.vue",
         './resources/views/**/*.blade.php',
-    './resources/js/**/*.js',
-    './app/Http/Livewire/**/*.php',
+        './resources/js/**/*.js',
+        './app/Http/Livewire/**/*.php',
+        './public/js/notifikasi.js',
     ],
     theme: {
         extend: {

@@ -4,19 +4,23 @@ namespace App\Filament\Resources;
 
 use Log;
 use Filament\Forms;
-use Filament\Tables;
+use App\Models\User;
 
+use Filament\Tables;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use App\Models\Transaction;
+use Filament\Exceptions\Halt;
 use App\Models\TransactionItems;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Route;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Contracts\Support\Htmlable;
@@ -24,6 +28,7 @@ use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionItemsResource\Pages\EditTransactionItems;
 use App\Filament\Resources\TransactionItemsResource\Pages\ListTransactionItems;
 use App\Filament\Resources\TransactionItemsResource\Pages\CreateTransactionItems;
+
 
 
 class TransactionResource extends Resource
@@ -41,6 +46,11 @@ class TransactionResource extends Resource
     {
         return false;
     }
+
+    public static function canViewAny(): bool
+{
+    return Auth::user()?->hasRole('admin') || Auth::user()?->hasRole('koki') || Auth::user()?->hasRole('pramusaji');
+}
 
     public static function form(Form $form): Form
     {
@@ -96,6 +106,7 @@ class TransactionResource extends Resource
 
     public static function table(Table $table): Table
     {
+        
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
@@ -110,9 +121,11 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('barcodes.table_number')
                     ->label('Nomor Meja'),
                 Tables\Columns\TextColumn::make('payment_method')
+                ->visible(fn () => Auth::user()?->hasRole('admin'))
                     ->label('Payment Method')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('payment_status')
+                ->visible(fn () => Auth::user()?->hasRole('admin'))
                     ->label('Payment Status')
                     ->badge()
                     ->colors([
@@ -121,14 +134,17 @@ class TransactionResource extends Resource
                         'danger' => fn ($state): bool => in_array($state, ['FAILED', 'EXPIRED']),
                     ]),
                 Tables\Columns\TextColumn::make('subtotal')
+                ->visible(fn () => Auth::user()?->hasRole('admin'))
                     ->label('Subtotal')
                     ->numeric()
                     ->money('IDR'),
                 Tables\Columns\TextColumn::make('ppn')
+                ->visible(fn () => Auth::user()?->hasRole('admin'))
                     ->label('PPN')
                     ->numeric()
                     ->money('IDR'),
                 Tables\Columns\TextColumn::make('total')
+                ->visible(fn () => Auth::user()?->hasRole('admin'))
                     ->label('Total')
                     ->numeric()
                     ->money('IDR'),
@@ -162,24 +178,66 @@ class TransactionResource extends Resource
                         ])
                     ),
                 Action::make('ubahStatus')
-                    ->label('Ubah Status')
-                    ->form([
-                        Select::make('status_pesanan')
-                            ->label('Status Pesanan')
-                            ->options([
-                                'menunggu' => 'Menunggu',
-                                'diproses' => 'Diproses',
-                                'diantar' => 'Sudah Diantar',
-                            ])
-                            ->required(),
-                    ])
-                    ->action(function (array $data, $record): void {
-                        $record->update([
-                            'status_pesanan' => $data['status_pesanan'],
-                        ]);
-                    })
-                    ->icon('heroicon-o-pencil')
-                    ->color('primary'),
+                ->visible(fn () => Auth::user()?->hasRole('koki') || Auth::user()?->hasRole('pramusaji'))
+                ->label('Ubah Status')
+                ->form(fn (Transaction $record) => [
+                    Select::make('status_pesanan')
+                ->label('Status Pesanan')
+                ->options(function ($record) {
+                    $user = Auth::user();
+                    $currentStatus = $record->status_pesanan;
+
+                    if ($user->hasRole('koki')) {
+                        return [
+                            'menunggu' => 'Menunggu',
+                            'diproses' => 'Diproses',
+                        ];
+                    }
+
+                    if ($user->hasRole('pramusaji')) {
+                        $options = [];
+
+                        // Tetap tampilkan status saat ini agar terlihat
+                        if ($currentStatus === 'diproses') {
+                            $options['diproses'] = 'Diproses';
+                        }
+
+                        // Pramusaji hanya bisa ubah ke "diantar"
+                        $options['diantar'] = 'Sudah Diantar';
+
+                        return $options;
+                    }
+
+                    // Fallback jika admin
+                    return [
+                        'menunggu' => 'Menunggu',
+                        'diproses' => 'Diproses',
+                        'diantar' => 'Sudah Diantar',
+                    ];
+                })
+                ->default(fn ($record) => $record->status_pesanan)
+                ->dehydrated(true)
+                ->required(),
+                ])
+                ->action(function (array $data, $record): void {
+                    // Validasi: tidak boleh langsung ke 'diantar' dari 'menunggu'
+                    if ($data['status_pesanan'] === 'diantar' && $record->status_pesanan !== 'diproses') {
+                        Notification::make()
+                            ->title('Gagal mengubah status')
+                            ->body('Pesanan hanya bisa diubah menjadi "Sudah Diantar" jika status sebelumnya adalah "Diproses".')
+                            ->danger()
+                            ->send();
+
+                        return; // pastikan proses update tidak lanjut
+                    }
+                    // Jika lolos validasi, update status
+                    $record->update([
+                        'status_pesanan' => $data['status_pesanan'],
+                    ]);
+                })
+                ->icon('heroicon-o-pencil')
+                ->color('primary')
+
             ])
             ->bulkActions([]);
     }
