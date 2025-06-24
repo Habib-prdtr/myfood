@@ -19,6 +19,7 @@
 
         @vite(["resources/css/app.css", "resources/js/app.js"])
 
+        <link rel="icon" href="{{ asset('assets/icons/logoTitle.png') }}" type="image/png">
         <title>{{ $title ?? "MyFood" }}</title>
     </head>
     <body class="{{ $class ?? "" }} mx-auto max-w-md bg-[#f5f5f9]">
