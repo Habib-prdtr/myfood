@@ -158,7 +158,7 @@ class TransactionController extends Controller
 
             $transaction = new Transaction();
             $transaction->checkout_link = $invoice['invoice_url'] ?? '';
-            $transaction->payment_method = "CREDIT CARD";
+            $transaction->payment_method = null;
             $transaction->phone = $phone;
             $transaction->name = $name;
             $transaction->subtotal = $subTotal;
@@ -167,7 +167,7 @@ class TransactionController extends Controller
             $transaction->total = $subTotal + $ppn;
             $transaction->external_id = $uuid;
             $transaction->code = $transactionCode;
-            $transaction->payment_status = "SUCCESS";
+            $transaction->payment_status = "PENDING";
             $transaction->save();
 
             foreach ($cartItems as $cartItem) {
@@ -266,49 +266,61 @@ class TransactionController extends Controller
     }
 
 
-//     public function paymentStatus($id)
-//     {
-//         // Contoh implementasi cek status pembayaran
-//         $transaction = Transaction::where('external_id', $id)->first();
+    public function paymentStatus($id)
+    {
+        // Contoh implementasi cek status pembayaran
+        $transaction = Transaction::where('external_id', $id)->first();
 
-//         if (!$transaction) {
-//             return response()->json(['message' => 'Transaction not found'], 404);
-//         }
+        if (!$transaction) {
+            return response()->json(['message' => 'Transaction not found'], 404);
+        }
 
-//         return response()->json([
-//             'status' => $transaction->payment_status,
-//             'external_id' => $transaction->external_id,
-//             'total' => $transaction->total,
-//         ]);
-//     }
+        return response()->json([
+            'status' => $transaction->payment_status,
+            'external_id' => $transaction->external_id,
+            'total' => $transaction->total,
+        ]);
+    }
 
-//     public function handleWebhook(Request $request)
-// {
-    
-//     Log::info('Webhook diterima', ['payload' => $request->all()]);
+    public function handleWebhook(Request $request)
+{
+    Log::info('Webhook diterima', ['payload' => $request->all()]);
 
-//     $externalId = $request->input('external_id');
-//     $status = $request->input('status');
-//     $paymentMethod = $request->input('payment_method');
+    $externalId = $request->input('external_id');
+    $status = $request->input('status');
+    $paymentMethod = $request->input('payment_method');
 
-//     $transaction = Transaction::where('external_id', $externalId)->first();
+    // 🔐 Verifikasi Token (contoh Xendit)
+    $token = $request->header('x-callback-token');
+    if ($token !== env('XENDIT_CALLBACK_TOKEN')) {
+        Log::warning('Webhook token tidak valid');
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
 
-//     if (! $transaction) {
-//         Log::warning("Transaksi tidak ditemukan untuk external_id: $externalId");
-//         return response()->json(['message' => 'Transaction not found'], 404);
-//     }
+    if (! $externalId || ! $status || ! $paymentMethod) {
+        Log::warning('Payload webhook tidak lengkap');
+        return response()->json(['message' => 'Invalid payload'], 400);
+    }
 
-//     $transaction->payment_status = $status;
-//     $transaction->payment_method = $paymentMethod;
-//     $transaction->save();
+    $transaction = Transaction::where('external_id', $externalId)->first();
 
-//     Log::info('Transaksi diperbarui dari webhook', [
-//         'external_id' => $externalId,
-//         'status' => $status,
-//         'payment_method' => $paymentMethod,
-//     ]);
+    if (! $transaction) {
+        Log::warning("Transaksi tidak ditemukan untuk external_id: $externalId");
+        return response()->json(['message' => 'Transaction not found'], 404);
+    }
 
-//     return response()->json(['message' => 'Webhook processed'], 200);
-// }
+    $transaction->payment_status = $status;
+    $transaction->payment_method = $paymentMethod;
+    $transaction->save();
+
+    Log::info('Transaksi diperbarui dari webhook', [
+        'external_id' => $externalId,
+        'status' => $status,
+        'payment_method' => $paymentMethod,
+    ]);
+
+    return response()->json(['message' => 'Webhook processed'], 200);
+}
+
 
 }
