@@ -33,7 +33,6 @@ class AdminPanelProvider extends PanelProvider
                 : 'Myfood | Admin'
             )
             ->login()
-            ->registration()
             ->colors([
             'danger' => Color::Rose,
             'gray' => Color::Gray,
