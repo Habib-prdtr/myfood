@@ -28,6 +28,7 @@ Route::middleware(CheckTableNumber::class)->group(function(){
     Route::get('/food/promo', PromoPage::class)->name('product.promo');
      // Detail Makanan | Food Details
      Route::get('/food/{id}', DetailPage::class)->name('product.detail');
+     Route::get('/pesanan', [TransactionController::class, 'pesananSaya'])->name('user.pesanan');
 });
 
 
@@ -40,7 +41,7 @@ Route::middleware(CheckTableNumber::class)->controller(TransactionController::cl
     Route::middleware('throttle:10,1')->post('/payment/{token}', 'handlePayment')->name('payment');
     Route::get('/payment', function () {
     abort(404);
-})->name('payment.dummy'); // Atau tanpa name sama sekali
+    })->name('payment.dummy'); // Atau tanpa name sama sekali
 
 
     // Status pembayaran
@@ -48,7 +49,7 @@ Route::middleware(CheckTableNumber::class)->controller(TransactionController::cl
     Route::get('/payment/success', PaymentSuccessPage::class)->name('payment.success');
     Route::get('/payment/failure', PaymentFailurePage::class)->name('payment.failure');
 
-    Route::get('pesanan', [TransactionController::class, 'pesananSaya'])->name('user.pesanan');
+    
     Route::get('/cek-status-pesanan', [TransactionController::class, 'cekStatusPesanan']);
 
 });

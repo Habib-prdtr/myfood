@@ -46,7 +46,7 @@
                 All Food
             </span>
         </a>
-        <a class="flex flex-col items-center" href="pesanan" wire:navigate>
+        <a class="flex flex-col items-center" href="{{ route('user.pesanan') }}" wire:navigate>
             <img
                 src="{{ request()->routeIs("user.pesanan") ? asset("assets/icons/pesanan-active.svg") : asset("assets/icons/pesanan.svg") }}"
                 alt="Pesanan"
