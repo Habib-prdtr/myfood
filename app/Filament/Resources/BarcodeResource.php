@@ -16,7 +16,7 @@ use App\Filament\Resources\BarcodeResource\Pages;
 class BarcodeResource extends Resource
 {
     protected static ?string $model = Barcode::class;
-
+    protected static ?int $navigationSort = 3;
     protected static ?string $navigationIcon = 'heroicon-o-qr-code';
 
     protected static ?string $navigationLabel = 'QR Codes';

@@ -20,7 +20,7 @@ use App\Filament\Resources\FoodsResource\RelationManagers;
 class FoodsResource extends Resource
 {
     protected static ?string $model = Foods::class;
-
+    protected static ?int $navigationSort = 5;
     protected static ?string $navigationIcon = 'heroicon-o-list-bullet';
 
     public static function canViewAny(): bool

@@ -35,6 +35,7 @@ class TransactionResource extends Resource
 {
     protected static ?string $model = Transaction::class;
 
+    protected static ?int $navigationSort = 6;
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
 
     public static function getRecordTitle(?Model $record): string|null|Htmlable

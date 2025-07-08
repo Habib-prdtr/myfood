@@ -14,7 +14,7 @@ use App\Filament\Resources\CategoryResource\Pages;
 class CategoryResource extends Resource
 {
     protected static ?string $model = Category::class;
-
+    protected static ?int $navigationSort = 4;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function canViewAny(): bool
